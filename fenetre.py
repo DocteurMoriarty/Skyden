@@ -1,7 +1,10 @@
 import sys
 import sqlite3
 import hashlib
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel, QFormLayout, QMessageBox, QTextEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QDialog, QVBoxLayout, QListWidgetItem, QLineEdit, QPushButton, QLabel, QFormLayout, QMessageBox, QTextEdit, QListWidget, QSplitter, QHBoxLayout
+from PyQt5.QtCore import Qt
+
+
 
 class RegisterWindow(QWidget):
     def __init__(self):
@@ -182,12 +185,13 @@ class LoginWindow(QWidget):
 
 
 
+
 class ChatWindow(QWidget):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle('Chat')
-        self.setGeometry(100, 100, 600, 400)  # Ajustement de la taille de la fenêtre pour le tableau des contacts
+        self.setGeometry(100, 100, 800, 600)
 
         # Création des widgets
         self.create_widgets()
@@ -195,26 +199,34 @@ class ChatWindow(QWidget):
         # Configuration des layouts
         self.main_layout = QHBoxLayout()
 
-        # Ajout du tableau des contacts et serveurs à gauche
-        self.main_layout.addWidget(self.contacts_list)
-
-        # Utilisation d'un QSplitter pour permettre le redimensionnement dynamique
+        # Création du QSplitter pour redimensionnement dynamique
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.addWidget(self.contacts_list)
         self.splitter.addWidget(self.chat_widget)
-        self.splitter.setStretchFactor(1, 2)  # Étire la fenêtre de chat plus que la liste
+        self.splitter.setSizes([200, 600])
 
         self.main_layout.addWidget(self.splitter)
         self.setLayout(self.main_layout)
+
+        # Application du style
+        self.apply_styles()
 
     def create_widgets(self):
         # Création de la zone de contacts/serveurs
         self.contacts_list = QListWidget()
 
-        # Exemple de contacts et serveurs à ajouter
-        contacts = ['Contact 1', 'Contact 2', 'Serveur A', 'Serveur B']
-        for contact in contacts:
-            QListWidgetItem(contact, self.contacts_list)
+        self.add_server_button = QPushButton('Ajouter Serveur')
+        self.add_server_button.clicked.connect(self.open_server_dialog)
+
+
+        # Ajout du bouton d'ajout de serveur
+        self.contacts_layout = QVBoxLayout()
+        self.contacts_layout.addWidget(self.add_server_button)
+        self.contacts_layout.addWidget(self.contacts_list)
+
+        # Création du widget pour la liste des contacts et serveurs
+        self.contacts_widget = QWidget()
+        self.contacts_widget.setLayout(self.contacts_layout)
 
         # Widget contenant la zone de chat et les boutons
         self.chat_widget = QWidget()
@@ -222,29 +234,137 @@ class ChatWindow(QWidget):
 
         # Zone d'affichage des messages
         self.chat_display = QTextEdit()
-        self.chat_display.setReadOnly(True)  # La zone d'affichage est en lecture seule
+        self.chat_display.setReadOnly(True)
 
-        # Zone de saisie du message
+        # Zone de saisie du message et bouton d'envoi alignés
         self.message_input = QTextEdit()
         self.message_input.setPlaceholderText('Tapez votre message ici...')
         self.message_input.setMaximumHeight(100)
 
-        # Bouton d'envoi
         self.send_button = QPushButton('Envoyer')
         self.send_button.clicked.connect(self.send_message)
 
+        # Création d'un layout horizontal pour l'input et le bouton
+        self.input_layout = QHBoxLayout()
+        self.input_layout.addWidget(self.message_input)
+        self.input_layout.addWidget(self.send_button)
+
         # Ajout des widgets de chat au layout
         self.chat_layout.addWidget(self.chat_display)
-        self.chat_layout.addWidget(self.message_input)
-        self.chat_layout.addWidget(self.send_button)
+        self.chat_layout.addLayout(self.input_layout)
 
         self.chat_widget.setLayout(self.chat_layout)
+
+    def apply_styles(self):
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #2e2e2e;
+                color: #e0e0e0;
+            }
+            QTextEdit {
+                background-color: #3c3c3c;
+                border: 1px solid #444;
+                color: #e0e0e0;
+            }
+            QPushButton {
+                background-color: #4a90d9;
+                border: none;
+                color: #fff;
+                padding: 10px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #357ab8;
+            }
+            QListWidget {
+                background-color: #333;
+                border: 1px solid #444;
+            }
+            QListWidgetItem {
+                color: #e0e0e0;
+            }
+        """)
 
     def send_message(self):
         message = self.message_input.toPlainText()
         if message:
-            self.chat_display.append(f'Vous: {message}')  # Ajouter le message à la zone d'affichage
-            self.message_input.clear()  # Effacer la zone de saisie
+            self.chat_display.append(f'Vous: {message}')
+            self.chat_display.verticalScrollBar().setValue(self.chat_display.verticalScrollBar().maximum())
+            self.message_input.clear()
+
+    def open_server_dialog(self):
+        dialog = ServerDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            name, ip, port = dialog.get_server_details()
+            if not name or not ip or not port:
+                QMessageBox.warning(self, 'Erreur', 'Tous les champs doivent être remplis.')
+                return
+            # Vous pouvez ajouter la validation de l'IP et du port ici si nécessaire
+            server_info = f'{name} ({ip}:{port})'
+            QListWidgetItem(server_info, self.contacts_list)
+
+
+
+
+class ServerDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle('Ajouter un Serveur')
+
+        # Création des widgets
+        self.name_input = QLineEdit()
+        self.ip_input = QLineEdit()
+        self.port_input = QLineEdit()
+
+        self.add_button = QPushButton('Ajouter')
+        self.cancel_button = QPushButton('Annuler')
+
+        self.add_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+        # Configuration du layout
+        form_layout = QFormLayout()
+        form_layout.addRow('Nom:', self.name_input)
+        form_layout.addRow('IP:', self.ip_input)
+        form_layout.addRow('Port:', self.port_input)
+
+        button_layout = QVBoxLayout()
+        button_layout.addWidget(self.add_button)
+        button_layout.addWidget(self.cancel_button)
+
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(form_layout)
+        main_layout.addLayout(button_layout)
+
+        self.setLayout(main_layout)
+
+    def get_server_details(self):
+        return self.name_input.text(), self.ip_input.text(), self.port_input.text()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
