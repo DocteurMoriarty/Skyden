@@ -181,25 +181,45 @@ class LoginWindow(QWidget):
 
 
 
+
 class ChatWindow(QWidget):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle('Chat')
-        self.setGeometry(100, 100, 400, 300)
+        self.setGeometry(100, 100, 600, 400)  # Ajustement de la taille de la fenêtre pour le tableau des contacts
 
         # Création des widgets
         self.create_widgets()
 
         # Configuration des layouts
-        self.main_layout = QVBoxLayout()
-        self.main_layout.addWidget(self.chat_display)
-        self.main_layout.addWidget(self.message_input)
-        self.main_layout.addWidget(self.send_button)
+        self.main_layout = QHBoxLayout()
 
+        # Ajout du tableau des contacts et serveurs à gauche
+        self.main_layout.addWidget(self.contacts_list)
+
+        # Utilisation d'un QSplitter pour permettre le redimensionnement dynamique
+        self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter.addWidget(self.contacts_list)
+        self.splitter.addWidget(self.chat_widget)
+        self.splitter.setStretchFactor(1, 2)  # Étire la fenêtre de chat plus que la liste
+
+        self.main_layout.addWidget(self.splitter)
         self.setLayout(self.main_layout)
 
     def create_widgets(self):
+        # Création de la zone de contacts/serveurs
+        self.contacts_list = QListWidget()
+
+        # Exemple de contacts et serveurs à ajouter
+        contacts = ['Contact 1', 'Contact 2', 'Serveur A', 'Serveur B']
+        for contact in contacts:
+            QListWidgetItem(contact, self.contacts_list)
+
+        # Widget contenant la zone de chat et les boutons
+        self.chat_widget = QWidget()
+        self.chat_layout = QVBoxLayout()
+
         # Zone d'affichage des messages
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)  # La zone d'affichage est en lecture seule
@@ -213,12 +233,18 @@ class ChatWindow(QWidget):
         self.send_button = QPushButton('Envoyer')
         self.send_button.clicked.connect(self.send_message)
 
+        # Ajout des widgets de chat au layout
+        self.chat_layout.addWidget(self.chat_display)
+        self.chat_layout.addWidget(self.message_input)
+        self.chat_layout.addWidget(self.send_button)
+
+        self.chat_widget.setLayout(self.chat_layout)
+
     def send_message(self):
         message = self.message_input.toPlainText()
         if message:
             self.chat_display.append(f'Vous: {message}')  # Ajouter le message à la zone d'affichage
             self.message_input.clear()  # Effacer la zone de saisie
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
